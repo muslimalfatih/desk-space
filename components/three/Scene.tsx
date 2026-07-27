@@ -11,7 +11,7 @@ import {
   useState,
 } from 'react';
 import { Canvas, ThreeEvent, useFrame, useThree } from '@react-three/fiber';
-import { OrbitControls, ContactShadows, Environment, Float, Line } from '@react-three/drei';
+import { OrbitControls, ContactShadows, Environment, Lightformer, Float, Line } from '@react-three/drei';
 import { animated, useSpring } from '@react-spring/three';
 import { EffectComposer, Bloom, ToneMapping, Vignette } from '@react-three/postprocessing';
 import { ToneMappingMode } from 'postprocessing';
@@ -501,8 +501,16 @@ export default function Scene() {
       <color attach="background" args={['#d9cfc0']} />
       <DragCtx.Provider value={{ drag, setDrag }}>
         <Suspense fallback={null}>
-          {/* HDR ambient light + reflections; blurred as the spatial backdrop */}
-          <Environment preset="apartment" background blur={0.8} />
+          {/* Ambient light + reflections, generated in-scene. drei's `preset` fetches an
+              HDR from raw.githack at runtime — that CDN 403s and took the whole scene
+              down with it. The backdrop is the clear color above. */}
+          <Environment resolution={128}>
+            {/* uniform warm term, standing in for the HDR's sky */}
+            <color attach="background" args={['#8a8178']} />
+            <Lightformer intensity={3} color="#fff1dc" position={[4, 5, 2]} scale={[8, 8, 1]} target={[0, 0, 0]} />
+            <Lightformer intensity={1} color="#cddcff" position={[-5, 2, -3]} scale={[8, 8, 1]} target={[0, 0, 0]} />
+            <Lightformer intensity={0.6} position={[0, -3, 0]} rotation={[-Math.PI / 2, 0, 0]} scale={[10, 10, 1]} />
+          </Environment>
           <directionalLight position={[4, 6, 3]} intensity={0.5} />
           <ParallaxGroup>
             <Platform />
@@ -514,7 +522,7 @@ export default function Scene() {
             <Bloom mipmapBlur intensity={0.5} luminanceThreshold={1.1} luminanceSmoothing={0.15} />
             <Vignette eskil={false} offset={0.25} darkness={0.5} />
             {/* EffectComposer bypasses the renderer's tone mapping — without this pass,
-                mid-HDR surfaces (white board under the apartment window) clip to pure white */}
+                mid-HDR surfaces (white board under the key light) clip to pure white */}
             <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
             {/* ponytail: DepthOfField skipped — halves frame rate for a subtle effect. */}
           </EffectComposer>
