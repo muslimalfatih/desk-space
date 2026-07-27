@@ -1,15 +1,31 @@
-# workspace.rent - 3D Workspace Configurator
+# workspace.rent — 3D Workspace Configurator
+
+Build it before you rent it. Design a home-office setup in 3D, IKEA-planner style — pick a desk, a chair, up to three monitors, and accessories from the side rail, watch them drop into a live 3D room, then review weekly/monthly totals and send a rental request.
 
 **[Live Demo](https://desk-space-taupe.vercel.app/)**
 
-Build it before you rent it. Design your workspace in 3D, IKEA-planner style: pick a desk, a chair, up to three monitors and accessories from the side rail, watch them drop into a live 3D room, then review weekly/monthly totals and send a rental request.
+<!-- TODO: screenshot or short GIF of the drag-to-snap flow -->
+
+## Contents
+
+- [Quickstart](#quickstart)
+- [Stack](#stack)
+- [Approach](#approach)
+- [Drag & place](#drag--place)
+- [Tech tradeoffs](#tech-tradeoffs)
+- [Accessibility](#accessibility)
+- [Known boundaries](#known-boundaries)
+- [With more time](#with-more-time)
+- [Docs](#docs)
+
+## Quickstart
 
 ```bash
 bun install
 bun dev   # http://localhost:3000
 ```
 
-Deploys to Vercel with zero config: `next build` is the whole story. No env vars, no external services at runtime.
+Deploys to Vercel with zero config: `next build` is the whole story. No env vars, no external services at runtime, no backend.
 
 ## Stack
 
@@ -17,13 +33,17 @@ Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, three.js with @re
 
 ## Approach
 
-Layout mirrors the IKEA Space Platform reference: full-height 3D canvas, a vertical icon rail on the right (Desks / Chairs / Monitors / Accessories) opening a flyout product grid, a floating top bar with the running weekly total and a Summary button, and a right-side drawer for checkout.
+Layout mirrors the IKEA Space Platform reference: a full-height 3D canvas, a vertical icon rail on the right (Desks / Chairs / Monitors / Accessories) opening a flyout product grid, a floating top bar with the running weekly total and a Summary button, and a right-side drawer for checkout.
 
-Pricing shows both cadences. The monthly rate is deliberately cheaper than four weeks, so the summary shows both and calls out the actual saving rather than inventing a discount. Items marked `(est)` in `data/products.ts` carry estimated prices.
+State lives in one small zustand store (`store/workspace.ts`): desk, chair, and an extras qty map. Monitors share a hard cap of 3 across models, enforced in the store rather than the UI, so no code path — catalog button, drag-and-drop, or in-scene drag — can exceed it.
 
-State is one small zustand store (`store/workspace.ts`): desk, chair, and an extras qty map. Monitors share a hard cap of 3 across models, enforced in the store, not the UI, so no code path can exceed it.
+Pricing shows both cadences. The monthly rate is genuinely cheaper than four weeks, so the summary states the actual dollar saving rather than inventing a discount; items marked `(est)` in `data/products.ts` carry estimated prices.
 
-Checkout is a request, not a fake purchase. No backend exists, so the CTA leads to a 4-field form (name, WhatsApp, delivery area, start date defaulting to +7 days), then an honest "Request sent" state with a reference number. There's also a "send via WhatsApp instead" link that genuinely works (`wa.me` with the itemized setup pre-filled).
+Checkout is a request, not a fake purchase. No backend exists, so the CTA leads to a 4-field form (name, WhatsApp, delivery area, start date defaulting to +7 days), then an honest "Request sent" state with a reference number. A "send via WhatsApp instead" link genuinely works too — a `wa.me` deep link pre-filled with the itemized setup.
+
+## Drag & place
+
+Placement is slot-based, not free: every item type has curated anchor slots ([slots.ts](components/three/slots.ts)) — monitors on three desk positions, lamps on desk corners, chairs on a front arc, plants on floor spots. Dragging (in-scene, or a catalog card into the room) raycasts onto the item's surface plane, magnetizes to the nearest free slot with ring/ghost/guide-line feedback, and springs back if released with no valid target. The scene stays believable by construction: there is no state in which an item floats somewhere invalid.
 
 ## Tech tradeoffs
 
@@ -43,13 +63,15 @@ Checkout is a request, not a fake purchase. No backend exists, so the CTA leads 
 
 **React Compiler lint rules are warnings in `components/`.** `eslint-plugin-react-hooks` 7 flags the scene's spring-from-effect and per-frame ref reads. They're real patterns worth revisiting, but silencing them beat restructuring working scene internals.
 
-## Drag & place
-
-Placement is slot-based, not free: every item type has curated anchor slots ([slots.ts](components/three/slots.ts)), monitors on three desk positions, lamps on desk corners, chairs on a front arc, plants on floor spots. Dragging (in-scene, or a catalog card into the room) raycasts onto the item's surface plane, magnetizes to the nearest free slot with ring/ghost/guide-line feedback, and springs back if released with no valid target. The scene stays believable by construction: there is no state in which an item floats somewhere invalid.
-
 ## Accessibility
 
 Cards are keyboard-operable (`role="radio"`, Enter/Space, visible focus rings), the drawer closes on Escape with scroll lock and initial focus, and `MotionConfig reducedMotion="user"` respects `prefers-reduced-motion` for all DOM animation.
+
+## Known boundaries
+
+Marked with `ponytail:` comments in the source: simulated request send, placeholder WhatsApp business number, no full focus trap in the drawer, DepthOfField skipped in the postprocessing chain. Product photography in `public/assets` is placeholder imagery — replace it with your own before any public deployment.
+
+The full list, with why each is a deliberate simplification rather than a gap, is in [docs/PRD.md](docs/PRD.md#explicitly-out-of-scope-known-boundaries-not-gaps).
 
 ## With more time
 
@@ -59,8 +81,7 @@ Cards are keyboard-operable (`role="radio"`, Enter/Space, visible focus rings), 
 - Room presets (studio corner / villa terrace) and a price-per-workday framing for teams.
 - Delivery areas are a hardcoded list in `SummaryDrawer.tsx`; they'd move server-side alongside a real endpoint.
 
-## Known boundaries
+## Docs
 
-Marked with `ponytail:` comments: simulated request send, placeholder WhatsApp business number, no full focus trap in the drawer, DepthOfField skipped in the postprocessing chain.
-
-Product photography in `public/assets` is placeholder imagery, replace it with your own before any public deployment.
+- [docs/PRD.md](docs/PRD.md) — retroactive spec: problem, users, in/out-of-scope, success criteria.
+- [CLAUDE.md](CLAUDE.md) — project conventions and where things live, for anyone (human or agent) working in this repo.
