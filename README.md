@@ -1,4 +1,6 @@
-# workspace.rent — 3D Workspace Configurator
+# workspace.rent - 3D Workspace Configurator
+
+**[Live Demo](https://desk-space-taupe.vercel.app/)**
 
 Build it before you rent it. Design your workspace in 3D, IKEA-planner style: pick a desk, a chair, up to three monitors and accessories from the side rail, watch them drop into a live 3D room, then review weekly/monthly totals and send a rental request.
 
@@ -27,7 +29,7 @@ Checkout is a request, not a fake purchase. No backend exists, so the CTA leads 
 
 **Generic low-poly 3D instead of scanned product models.** Every piece is a small parametric primitive component (`components/three/Furniture3D.tsx`) in one consistent style, and each product carries a `modelPath` field so real models can be swapped in without touching scene logic. The payoff: the two adjustable desks share one animated height, so swapping desks (or adding one) raises the desk with the monitors riding the surface, the sit-stand pitch, animated.
 
-**`<Environment preset="apartment">` + `ContactShadows` instead of drei's `<Stage>`.** Stage re-centers and re-frames on bounding-box changes, so adding a monitor would jolt the camera. The HDR environment (fetched once from the pmndrs CDN) does the lighting/reflections; a fixed camera rig stays stable. Note: an explicit `ToneMapping` pass sits at the end of the postprocessing chain, since `EffectComposer` bypasses the renderer's ACES tone mapping, and without it bright surfaces clip to white.
+**`<Environment>` + `ContactShadows` instead of drei's `<Stage>`.** Stage re-centers and re-frames on bounding-box changes, so adding a monitor would jolt the camera; a fixed camera rig stays stable. The environment map is generated in-scene from three `<Lightformer>` panels rather than drei's `preset="apartment"`: presets fetch an HDR from a third-party CDN at runtime, and when that CDN started returning 403 the failed fetch threw inside `<Suspense>` and took the whole canvas down. Lighting is now a build artifact, not a network call. Swapping a real `.hdr` back in is a one-line change if the reflection detail is ever worth the dependency. Note: an explicit `ToneMapping` pass sits at the end of the postprocessing chain, since `EffectComposer` bypasses the renderer's ACES tone mapping, and without it bright surfaces clip to white.
 
 **@react-spring/three for add/remove pops** (slight overshoot on scale, none on glides), plus Bloom + Vignette postprocessing, capped for mid-range hardware: dpr ≤ 1.75, multisampling 0, and no DepthOfField (it halves frame rate for a subtle effect, marked in the code if profiling justifies it later).
 
